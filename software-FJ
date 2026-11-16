@@ -1,7 +1,8 @@
 # ============================================================
-# SOFTWARE FJ
 # SISTEMA INTEGRAL DE GESTION DE CLIENTES, SERVICIOS Y RESERVAS
 # ============================================================
+
+# importación librerias#
 
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -67,7 +68,7 @@ class Entidad(ABC):
 
 
 # ============================================================
-# 4. CLASE CLIENTE
+# 4. CLASE CLIENTE (Hija)
 # ============================================================
 
 class Cliente(Entidad):
