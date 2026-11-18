@@ -273,3 +273,162 @@ class ServicioAsesoria(Servicio):
 
 
 # ======================================
+# 9. CLASE RESERVA
+# ============================================================
+
+class Reserva(Entidad):
+
+    def __init__(self, identificacion, cliente, servicio, duracion):
+
+        # Validar que el cliente sea un objeto de tipo Cliente
+        if not isinstance(cliente, Cliente):
+            raise ErrorReserva("Debe seleccionar un cliente valido.")
+
+        # Validar que el servicio sea un objeto de tipo Servicio
+        if not isinstance(servicio, Servicio):
+            raise ErrorReserva("Debe seleccionar un servicio valido.")
+
+        # Validar los parámetros de duración del servicio
+        servicio.validar_parametros(duracion)
+
+        # Inicializar los atributos heredados de Entidad
+        super().__init__(identificacion, f"Reserva {identificacion}")
+
+        # Atributos privados de la reserva
+        self.__cliente = cliente
+        self.__servicio = servicio
+        self.__duracion = duracion
+        self.__estado = "Pendiente"
+        self.__fecha = datetime.now()
+        self.__costo = None
+
+    # --------------------------------------------------------
+    # PROPIEDADES
+    # --------------------------------------------------------
+
+    @property
+    def cliente(self):
+        return self.__cliente
+
+    @property
+    def servicio(self):
+        return self.__servicio
+
+    @property
+    def duracion(self):
+        return self.__duracion
+
+    @property
+    def estado(self):
+        return self.__estado
+
+    @property
+    def costo(self):
+        return self.__costo
+
+    # --------------------------------------------------------
+    # MÉTODO PARA CONFIRMAR LA RESERVA
+    # --------------------------------------------------------
+
+    def confirmar(self):
+
+        if self.__estado != "Pendiente":
+            raise ErrorReserva(
+                "Solo se pueden confirmar reservas pendientes."
+            )
+
+        self.__estado = "Confirmada"
+
+        logging.info(
+            "Reserva %s confirmada.",
+            self.identificacion
+        )
+
+        print("Reserva confirmada correctamente.")
+
+    # --------------------------------------------------------
+    # MÉTODO PARA CANCELAR LA RESERVA
+    # --------------------------------------------------------
+
+    def cancelar(self):
+
+        if self.__estado not in ("Pendiente", "Confirmada"):
+            raise ErrorReserva(
+                "No se puede cancelar una reserva procesada o cancelada."
+            )
+
+        self.__estado = "Cancelada"
+
+        logging.info(
+            "Reserva %s cancelada.",
+            self.identificacion
+        )
+
+        print("Reserva cancelada correctamente.")
+
+    # --------------------------------------------------------
+    # MÉTODO PARA PROCESAR LA RESERVA
+    # --------------------------------------------------------
+
+    def procesar(self, impuesto=0, descuento=0):
+
+        if self.__estado != "Confirmada":
+            raise ErrorReserva(
+                "La reserva debe estar confirmada para procesarse."
+            )
+
+        try:
+            self.__costo = self.__servicio.calcular_costo(
+                self.__duracion,
+                impuesto,
+                descuento
+            )
+
+            self.__estado = "Procesada"
+
+        except ErrorSistema as error:
+
+            logging.exception(
+                "Error procesando la reserva."
+            )
+
+            raise ErrorReserva(
+                "No fue posible procesar el costo de la reserva."
+            ) from error
+
+        logging.info(
+            "Reserva %s procesada. Costo: $%s",
+            self.identificacion,
+            self.__costo
+        )
+
+        print("Reserva procesada correctamente.")
+        print("Costo total: $", self.__costo)
+
+        return self.__costo
+
+    # --------------------------------------------------------
+    # MÉTODO PARA MOSTRAR LA INFORMACIÓN
+    # --------------------------------------------------------
+
+    def mostrar_informacion(self):
+
+        print("\n--- INFORMACION DE LA RESERVA ---")
+
+        print("Codigo:", self.identificacion)
+        print("Cliente:", self.cliente.nombre)
+        print("Servicio:", self.servicio.nombre)
+        print("Duracion:", self.duracion)
+        print("Estado:", self.estado)
+
+        print(
+            "Fecha:",
+            self.__fecha.strftime("%d/%m/%Y %H:%M")
+        )
+
+        if self.__costo is not None:
+            print("Costo:", self.__costo)
+
+
+# ============================================================
+
