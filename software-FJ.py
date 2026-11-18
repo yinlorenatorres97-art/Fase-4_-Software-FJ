@@ -431,4 +431,274 @@ class Reserva(Entidad):
 
 
 # ============================================================
+# 10. CLASE PRINCIPAL: SISTEMA SOFTWARE FJ
+# ============================================================
 
+class SistemaSoftwareFJ:
+
+    def __init__(self, cargar_servicios=True):
+
+        self.clientes = []
+        self.servicios = []
+        self.reservas = []
+
+        if cargar_servicios:
+            self.cargar_servicios_iniciales()
+
+    def cargar_servicios_iniciales(self):
+
+        servicios = [
+            ServicioSala("S01", "Sala de reuniones", 5000),
+            ServicioEquipo("E01", "Computador portatil", 8000),
+            ServicioAsesoria("A01", "Asesoria informatica", 10000)
+        ]
+
+        for servicio in servicios:
+            self.agregar_servicio(servicio)
+
+    # REGISTRAR CLIENTE
+
+    def registrar_cliente(self, nombre, documento, correo, telefono):
+
+        if any(c.identificacion == documento for c in self.clientes):
+            raise ErrorCliente("El documento ya se encuentra registrado.")
+
+        cliente = Cliente(nombre, documento, correo, telefono)
+        self.clientes.append(cliente)
+
+        logging.info("Cliente registrado: %s", cliente.nombre)
+
+        return cliente
+
+    # REGISTRAR SERVICIO
+
+    def agregar_servicio(self, servicio):
+
+        if not isinstance(servicio, Servicio):
+            raise ErrorServicio("El objeto no corresponde a un servicio valido.")
+
+        if any(s.identificacion == servicio.identificacion for s in self.servicios):
+            raise ErrorServicio("El codigo del servicio ya existe.")
+
+        self.servicios.append(servicio)
+
+        logging.info("Servicio registrado: %s", servicio.nombre)
+
+        return servicio
+
+    # CREAR RESERVA
+
+    def crear_reserva(self, documento, codigo_servicio, duracion):
+
+        cliente = next(
+            (c for c in self.clientes if c.identificacion == documento), None
+        )
+
+        servicio = next(
+            (s for s in self.servicios if s.identificacion == codigo_servicio), None
+        )
+
+        if cliente is None:
+            raise ErrorCliente("No se encontro el cliente solicitado.")
+
+        if servicio is None:
+            raise ErrorServicio("No se encontro el servicio solicitado.")
+
+        reserva = Reserva(
+            f"R{len(self.reservas) + 1:03d}",
+            cliente,
+            servicio,
+            duracion
+        )
+
+        self.reservas.append(reserva)
+
+        logging.info("Reserva creada: %s", reserva.identificacion)
+
+        return reserva
+
+    # BUSCAR RESERVA
+
+    def buscar_reserva(self, codigo):
+
+        reserva = next(
+            (r for r in self.reservas if r.identificacion == codigo), None
+        )
+
+        if reserva is None:
+            raise ErrorReserva("La reserva no existe.")
+
+        return reserva
+
+    # MOSTRAR CLIENTES
+
+    def listar_clientes(self):
+
+        print("\n========== LISTA DE CLIENTES ==========")
+
+        if not self.clientes:
+            print("No hay clientes registrados.")
+            return
+
+        for cliente in self.clientes:
+            cliente.mostrar_informacion()
+
+    # MOSTRAR SERVICIOS
+
+    def listar_servicios(self):
+
+        print("\n========== SERVICIOS DISPONIBLES ==========")
+
+        if not self.servicios:
+            print("No hay servicios registrados.")
+            return
+
+        for servicio in self.servicios:
+            servicio.mostrar_informacion()
+            print("Descripcion:", servicio.describir())
+            print("Disponible:", "Si" if servicio.disponible else "No")
+
+    # MOSTRAR RESERVAS
+
+    def listar_reservas(self):
+
+        print("\n========== LISTA DE RESERVAS ==========")
+
+        if not self.reservas:
+            print("No hay reservas registradas.")
+            return
+
+        for reserva in self.reservas:
+            reserva.mostrar_informacion()
+
+
+# ============================================================
+# 11. REGISTRO DE ERRORES Y EVENTOS
+# ============================================================
+
+def ejecutar_operacion(descripcion, funcion):
+
+    print("\nOPERACION:", descripcion)
+
+    try:
+        funcion()
+
+    except ErrorSistema as error:
+        logging.error("Error controlado: %s", error)
+        print("Operacion no realizada:", error)
+
+    except Exception:
+        logging.exception("Error inesperado.")
+        print("Se presento un error inesperado. El sistema continua.")
+
+    else:
+        logging.info("Operacion exitosa: %s", descripcion)
+        print("Operacion realizada correctamente.")
+
+    finally:
+        print("Fin de la operacion.")
+
+
+# ============================================================
+# 12. PRUEBAS AUTOMATICAS: MINIMO 10 OPERACIONES
+# ============================================================
+
+def ejecutar_pruebas():
+
+    print("\n==========================================")
+    print("     PRUEBAS DEL SISTEMA SOFTWARE FJ")
+    print("==========================================")
+
+    sistema = SistemaSoftwareFJ(cargar_servicios=False)
+
+    # OPERACION 1: Registro valido de cliente
+
+    ejecutar_operacion(
+        "Registro de cliente valido",
+        lambda: sistema.registrar_cliente(
+            "Carlos Perez", "123456789", "carlos@gmail.com", "3101234567"
+        )
+    )
+
+    # OPERACION 2: Registro invalido de cliente
+
+    ejecutar_operacion(
+        "Registro de cliente con documento incorrecto",
+        lambda: sistema.registrar_cliente(
+            "Maria Lopez", "ABC123", "maria@gmail.com", "3001234567"
+        )
+    )
+
+    # OPERACION 3: Creacion de servicio valido
+
+    ejecutar_operacion(
+        "Creacion de servicio de sala",
+        lambda: sistema.agregar_servicio(
+            ServicioSala("S01", "Sala principal", 5000)
+        )
+    )
+
+    # OPERACION 4: Creacion de servicio invalido
+
+    ejecutar_operacion(
+        "Creacion de servicio con tarifa negativa",
+        lambda: sistema.agregar_servicio(
+            ServicioEquipo("E02", "Computador", -1000)
+        )
+    )
+
+    # OPERACION 5: Registro de cliente duplicado
+
+    ejecutar_operacion(
+        "Registro de documento duplicado",
+        lambda: sistema.registrar_cliente(
+            "Carlos Perez", "123456789", "otro@gmail.com", "3101234567"
+        )
+    )
+
+    # OPERACION 6: Creacion de reserva correcta
+
+    ejecutar_operacion(
+        "Creacion de reserva valida",
+        lambda: sistema.crear_reserva("123456789", "S01", 3)
+    )
+
+    # OPERACION 7: Creacion de reserva incorrecta
+
+    ejecutar_operacion(
+        "Reserva con duracion incorrecta",
+        lambda: sistema.crear_reserva("123456789", "S01", 0)
+    )
+
+    # OPERACION 8: Confirmacion de reserva
+
+    ejecutar_operacion(
+        "Confirmacion de reserva",
+        lambda: sistema.buscar_reserva("R001").confirmar()
+    )
+
+    # OPERACION 9: Procesamiento y calculo de costo
+
+    ejecutar_operacion(
+        "Procesamiento de reserva con impuesto y descuento",
+        lambda: sistema.buscar_reserva("R001").procesar(19, 10)
+    )
+
+    # OPERACION 10: Crear y cancelar una segunda reserva
+
+    def crear_y_cancelar():
+        reserva = sistema.crear_reserva("123456789", "S01", 2)
+        reserva.cancelar()
+
+    ejecutar_operacion(
+        "Creacion y cancelacion de reserva",
+        crear_y_cancelar
+    )
+
+    print("\n==========================================")
+    print("       FIN DE LAS PRUEBAS")
+    print("==========================================")
+
+    sistema.listar_clientes()
+    sistema.listar_servicios()
+    sistema.listar_reservas()
