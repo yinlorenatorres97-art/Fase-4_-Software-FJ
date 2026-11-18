@@ -702,3 +702,301 @@ def ejecutar_pruebas():
     sistema.listar_clientes()
     sistema.listar_servicios()
     sistema.listar_reservas()
+
+# ============================================================
+# 13. FUNCIONES PARA SOLICITAR DATOS Y REPETIR SI HAY ERRORES
+# ============================================================
+
+def pedir_texto(mensaje, validador=None):
+    """Solicita texto y vuelve a pedirlo si esta vacio o no pasa la validacion."""
+    while True:
+        dato = input(mensaje).strip()
+
+        if not dato:
+            print("Error: este campo no puede quedar vacio. Intente nuevamente.")
+            continue
+
+        try:
+            if validador is not None:
+                validador(dato)
+            return dato
+        except ErrorSistema as error:
+            print("Error:", error)
+            print("Por favor, intente nuevamente.")
+
+
+def pedir_numero(mensaje, minimo=None, maximo=None):
+    """Solicita un numero y lo vuelve a pedir si no es valido."""
+    while True:
+        dato = input(mensaje).strip()
+
+        try:
+            numero = float(dato)
+
+            if minimo is not None and numero < minimo:
+                print(f"Error: el valor debe ser mayor o igual a {minimo}.")
+                continue
+
+            if maximo is not None and numero > maximo:
+                print(f"Error: el valor debe ser menor o igual a {maximo}.")
+                continue
+
+            return numero
+
+        except ValueError:
+            print("Error: debe ingresar un valor numerico.")
+            print("Por favor, intente nuevamente.")
+
+
+def validar_nombre(dato):
+    if not dato.strip():
+        raise ErrorValidacion("El nombre es obligatorio.")
+
+
+def validar_documento(dato):
+    if not dato.isdigit():
+        raise ErrorValidacion("El documento debe contener solo numeros.")
+
+
+def validar_correo(dato):
+    if "@" not in dato or "." not in dato:
+        raise ErrorValidacion("El correo electronico no es valido.")
+
+
+def validar_telefono(dato):
+    if not dato.isdigit():
+        raise ErrorValidacion("El telefono debe contener solo numeros.")
+
+
+def solicitar_cliente(sistema):
+    print("\n--- REGISTRO DE CLIENTE ---")
+
+    nombre = pedir_texto("Nombre del cliente: ", validar_nombre)
+
+    def documento_disponible(documento):
+        validar_documento(documento)
+        if any(c.identificacion == documento for c in sistema.clientes):
+            raise ErrorCliente("Ese documento ya se encuentra registrado.")
+
+    documento = pedir_texto("Documento: ", documento_disponible)
+    correo = pedir_texto("Correo electronico: ", validar_correo)
+    telefono = pedir_texto("Telefono: ", validar_telefono)
+
+    cliente = sistema.registrar_cliente(nombre, documento, correo, telefono)
+    print("Cliente registrado correctamente:", cliente.nombre)
+
+
+def validar_tipo_servicio(dato):
+    if dato not in ("1", "2", "3"):
+        raise ErrorValidacion("Seleccione 1, 2 o 3.")
+
+
+def validar_opcion_menu(dato):
+    opciones = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10")
+    if dato not in opciones:
+        raise ErrorValidacion("Seleccione una opcion del 0 al 10.")
+
+
+def solicitar_servicio(sistema):
+    print("\n--- CREAR SERVICIO ---")
+    print("1. Reserva de salas")
+    print("2. Alquiler de equipos")
+    print("3. Asesorias especializadas")
+
+    tipo = pedir_texto(
+        "Seleccione el tipo de servicio (1, 2 o 3): ",
+        validar_tipo_servicio
+    )
+
+    def validar_codigo(codigo):
+        if any(s.identificacion == codigo for s in sistema.servicios):
+            raise ErrorServicio("Ese codigo de servicio ya existe.")
+
+    codigo = pedir_texto("Codigo del servicio: ", validar_codigo)
+    nombre = pedir_texto("Nombre del servicio: ", validar_nombre)
+    tarifa = pedir_numero("Tarifa: $", minimo=0.01)
+
+    if tipo == "1":
+        servicio = ServicioSala(codigo, nombre, tarifa)
+    elif tipo == "2":
+        servicio = ServicioEquipo(codigo, nombre, tarifa)
+    else:
+        servicio = ServicioAsesoria(codigo, nombre, tarifa)
+
+    sistema.agregar_servicio(servicio)
+    print("Servicio creado correctamente.")
+
+
+def solicitar_reserva(sistema):
+    print("\n--- CREAR RESERVA ---")
+
+    def validar_cliente_existente(documento):
+        validar_documento(documento)
+        if not any(c.identificacion == documento for c in sistema.clientes):
+            raise ErrorCliente("No se encontro ese cliente. Verifique el documento.")
+
+    documento = pedir_texto(
+        "Documento del cliente: ",
+        validar_cliente_existente
+    )
+
+    def validar_servicio_disponible(codigo):
+        servicio_encontrado = next(
+            (s for s in sistema.servicios if s.identificacion == codigo), None
+        )
+        if servicio_encontrado is None:
+            raise ErrorServicio("No se encontro ese servicio. Verifique el codigo.")
+        if not servicio_encontrado.disponible:
+            raise ErrorServicio("Ese servicio no esta disponible. Elija otro.")
+
+    codigo = pedir_texto(
+        "Codigo del servicio: ",
+        validar_servicio_disponible
+    )
+
+    servicio = next(
+        s for s in sistema.servicios if s.identificacion == codigo
+    )
+
+    while True:
+        duracion = pedir_numero(
+            "Duracion en horas o dias: ",
+            minimo=0.01
+        )
+        try:
+            servicio.validar_parametros(duracion)
+            break
+        except ErrorSistema as error:
+            print("Error:", error)
+            print("Ingrese nuevamente la duracion.")
+
+    reserva = sistema.crear_reserva(documento, codigo, duracion)
+    print("Reserva creada correctamente:", reserva.identificacion)
+
+
+def solicitar_reserva_existente(sistema):
+    def validar_codigo(codigo):
+        sistema.buscar_reserva(codigo)
+
+    codigo = pedir_texto("Codigo de la reserva: ", validar_codigo)
+    return sistema.buscar_reserva(codigo)
+
+
+def menu_principal():
+
+    sistema = SistemaSoftwareFJ()
+
+    while True:
+
+        print("\n==========================================")
+        print("          SISTEMA SOFTWARE FJ")
+        print("==========================================")
+        print("1. Registrar cliente")
+        print("2. Consultar clientes")
+        print("3. Consultar servicios")
+        print("4. Crear servicio")
+        print("5. Crear reserva")
+        print("6. Consultar reservas")
+        print("7. Confirmar reserva")
+        print("8. Cancelar reserva")
+        print("9. Procesar reserva y calcular costo")
+        print("10. Ejecutar las 10 pruebas automaticas")
+        print("0. Salir")
+        print("==========================================")
+
+        try:
+            opcion = pedir_texto(
+                "Seleccione una opcion: ",
+                validar_opcion_menu
+            )
+
+            if opcion == "1":
+                solicitar_cliente(sistema)
+
+            elif opcion == "2":
+                sistema.listar_clientes()
+
+            elif opcion == "3":
+                sistema.listar_servicios()
+
+            elif opcion == "4":
+                solicitar_servicio(sistema)
+
+            elif opcion == "5":
+                solicitar_reserva(sistema)
+
+            elif opcion == "6":
+                sistema.listar_reservas()
+
+            elif opcion == "7":
+                reserva = solicitar_reserva_existente(sistema)
+                reserva.confirmar()
+
+            elif opcion == "8":
+                reserva = solicitar_reserva_existente(sistema)
+                reserva.cancelar()
+
+            elif opcion == "9":
+                reserva = solicitar_reserva_existente(sistema)
+                impuesto = pedir_numero(
+                    "Impuesto en porcentaje (0 si no aplica): ",
+                    minimo=0,
+                    maximo=100
+                )
+                descuento = pedir_numero(
+                    "Descuento en porcentaje (0 si no aplica): ",
+                    minimo=0,
+                    maximo=100
+                )
+                reserva.procesar(impuesto, descuento)
+
+            elif opcion == "10":
+                ejecutar_pruebas()
+
+            elif opcion == "0":
+                logging.info("El usuario cerro el sistema.")
+                print("Gracias por utilizar Software FJ.")
+                break
+
+        except ErrorSistema as error:
+            logging.error("Error en el menu: %s", error)
+            print("\nERROR:", error)
+
+        except ValueError as error:
+            logging.error("Error en los datos ingresados: %s", error)
+            print("\nERROR: Debe ingresar un valor numerico valido.")
+
+            # Encadenamiento de excepciones
+            try:
+                raise ErrorValidacion(
+                    "No fue posible procesar el dato ingresado."
+                ) from error
+
+            except ErrorValidacion as error_encadenado:
+                logging.exception("Excepcion encadenada.")
+                print(error_encadenado)
+
+        except Exception:
+            logging.exception("Error inesperado en el menu.")
+            print("Ocurrio un error inesperado. Puede continuar.")
+
+        finally:
+            print("\nOperacion finalizada. Software FJ sigue activo.")
+
+
+# ============================================================
+# 14. INICIO DEL PROGRAMA
+# ============================================================
+
+if __name__ == "__main__":
+
+    try:
+        logging.info("Inicio del sistema Software FJ.")
+        menu_principal()
+
+    except Exception:
+        logging.exception("Error critico en el inicio del sistema.")
+        print("No fue posible iniciar el sistema.")
+
+    finally:
+        logging.info("Finalizacion de la ejecucion.")
