@@ -2,6 +2,12 @@
 # SISTEMA INTEGRAL DE GESTION DE CLIENTES, SERVICIOS Y RESERVAS
 # ============================================================
 
+#importancion Tkinder#
+import tkinter as tk
+from tkinter import messagebox, simpledialog
+from contextlib import redirect_stdout
+from io import StringIO
+
 # importación librerias#
 
 from abc import ABC, abstractmethod
@@ -274,7 +280,7 @@ class ServicioAsesoria(Servicio):
 
 # ======================================
 # 9. CLASE RESERVA
-# ============================================================
+# ======================================
 
 class Reserva(Entidad):
 
@@ -988,15 +994,385 @@ def menu_principal():
 # 14. INICIO DEL PROGRAMA
 # ============================================================
 
-if __name__ == "__main__":
+class InterfazSoftwareFJ:
 
+    def __init__(self, ventana):
+        self.ventana = ventana
+        self.sistema = SistemaSoftwareFJ()
+
+        self.ventana.title("Software FJ - Sistema de Gestion")
+        self.ventana.geometry("950x720")
+        self.ventana.minsize(850, 650)
+
+        self.azul ="#17365D"
+        self.azul_claro ="#DCE6F1"
+        self.fondo ="#F4F6F9"
+        self.ventana.configure(bg=self.fondo)
+
+        self.crear_encabezado()
+        self.crear_contenido()
+        self.crear_menu()
+        self.crear_pie()
+
+    def crear_encabezado(self):
+        encabezado = tk.Frame(self.ventana, bg=self.azul, height=105)
+        encabezado.pack(fill="x")
+        encabezado.pack_propagate(False)
+
+        tk.Label(
+            encabezado, text="SOFTWARE FJ",
+            font=("Arial", 25, "bold"), fg="white", bg=self.azul
+        ).pack(pady=(18, 5))
+
+        tk.Label(
+            encabezado,
+            text="Sistema de gestion de clientes, servicios y reservas",
+            font=("Arial", 11), fg="white", bg=self.azul
+        ).pack()
+
+    def crear_contenido(self):
+        contenido = tk.Frame(self.ventana, bg=self.fondo)
+        contenido.pack(fill="both", expand=True, padx=28, pady=18)
+
+        tk.Label(
+            contenido, text="Bienvenido al sistema",
+            font=("Arial", 19, "bold"), fg=self.azul, bg=self.fondo
+        ).pack(pady=(0, 5))
+
+        tk.Label(
+            contenido,
+            text="Seleccione una operacion. Los resultados apareceran en el panel.",
+            font=("Arial", 10), fg="#555555", bg=self.fondo
+        ).pack(pady=(0, 10))
+
+        self.salida = tk.Text(
+            contenido, height=9, width=100, font=("Consolas", 10),
+            wrap="word", state="disabled", bg="white", relief="solid",
+            borderwidth=1
+        )
+        self.salida.pack(fill="both", expand=True, pady=(5, 0))
+        self.mostrar_salida(
+            "Sistema iniciado correctamente.\n"
+            "Servicios iniciales cargados: S01, E01 y A01."
+        )
+
+    def crear_menu(self):
+        marco = tk.Frame(self.ventana, bg=self.fondo)
+        marco.pack(padx=20, pady=8)
+
+        opciones = [
+            ("Registrar cliente", self.registrar_cliente),
+            ("Consultar clientes", self.consultar_clientes),
+            ("Consultar servicios", self.consultar_servicios),
+            ("Crear servicio", self.crear_servicio),
+            ("Crear reserva", self.crear_reserva),
+            ("Consultar reservas", self.consultar_reservas),
+            ("Confirmar reserva", self.confirmar_reserva),
+            ("Cancelar reserva", self.cancelar_reserva),
+            ("Procesar reserva", self.procesar_reserva),
+            ("Ejecutar pruebas", self.pruebas)
+        ]
+
+        for indice, (texto, comando) in enumerate(opciones):
+            fila = indice // 5
+            columna = indice % 5
+            boton = tk.Button(
+                marco, text=texto, command=comando,
+                width=17, height=2, font=("Arial", 9, "bold"),
+                bg=self.azul_claro, fg=self.azul, relief="flat",
+                activebackground="#B4C7E7", cursor="hand2"
+            )
+            boton.grid(row=fila, column=columna, padx=4, pady=4)
+
+    def crear_pie(self):
+        pie = tk.Label(
+            self.ventana, text="Software FJ | Sistema de gestion",
+            font=("Arial", 9), bg=self.azul, fg="white", pady=9
+        )
+        pie.pack(fill="x", side="bottom")
+
+    def mostrar_salida(self, texto):
+        self.salida.config(state="normal")
+        self.salida.delete("1.0", "end")
+        self.salida.insert("end", texto)
+        self.salida.config(state="disabled")
+
+    def ejecutar_seguro(self, funcion):
+        try:
+            funcion()
+        except ErrorSistema as error:
+            logging.error("Error en interfaz: %s", error)
+            messagebox.showerror("Error", str(error))
+        except (ValueError, TypeError):
+            messagebox.showerror(
+                "Dato incorrecto", "Verifique los datos ingresados."
+            )
+        except Exception as error:
+            logging.exception("Error inesperado en interfaz.")
+            messagebox.showerror("Error inesperado", str(error))
+
+    def registrar_cliente(self):
+        def operacion():
+            nombre = simpledialog.askstring("Registrar cliente", "Nombre:")
+            if nombre is None:
+                return
+            documento = simpledialog.askstring("Registrar cliente", "Documento:")
+            if documento is None:
+                return
+            correo = simpledialog.askstring("Registrar cliente", "Correo electronico:")
+            if correo is None:
+                return
+            telefono = simpledialog.askstring("Registrar cliente", "Telefono:")
+            if telefono is None:
+                return
+
+            cliente = self.sistema.registrar_cliente(
+                nombre, documento, correo, telefono
+            )
+            self.mostrar_salida(
+                "CLIENTE REGISTRADO CORRECTAMENTE\n\n"
+                f"Nombre: {cliente.nombre}\n"
+                f"Documento: {cliente.identificacion}\n"
+                f"Correo: {cliente.correo}\n"
+                f"Telefono: {cliente.telefono}"
+            )
+            messagebox.showinfo("Correcto", "Cliente registrado correctamente.")
+
+        self.ejecutar_seguro(operacion)
+
+    def consultar_clientes(self):
+        if not self.sistema.clientes:
+            self.mostrar_salida("No hay clientes registrados.")
+            return
+
+        lineas = ["LISTA DE CLIENTES", "=" * 55, ""]
+        for cliente in self.sistema.clientes:
+            lineas.append(
+                f"Nombre: {cliente.nombre}\n"
+                f"Documento: {cliente.identificacion}\n"
+                f"Correo: {cliente.correo}\n"
+                f"Telefono: {cliente.telefono}\n"
+                + "-" * 45
+            )
+        self.mostrar_salida("\n".join(lineas))
+
+    def consultar_servicios(self):
+        lineas = ["SERVICIOS REGISTRADOS", "=" * 55, ""]
+        for servicio in self.sistema.servicios:
+            tipo = servicio.__class__.__name__.replace("Servicio", "")
+            estado = "Disponible" if servicio.disponible else "No disponible"
+            lineas.append(
+                f"Codigo: {servicio.identificacion}\n"
+                f"Nombre: {servicio.nombre}\n"
+                f"Tipo: {tipo}\n"
+                f"Tarifa: ${servicio.tarifa:,.2f}\n"
+                f"Descripcion: {servicio.describir()}\n"
+                f"Estado: {estado}\n"
+                + "-" * 45
+            )
+        self.mostrar_salida("\n".join(lineas))
+
+    def crear_servicio(self):
+        def operacion():
+            tipo = simpledialog.askinteger(
+                "Crear servicio",
+                "Seleccione el tipo:\n1. Sala\n2. Equipo\n3. Asesoria",
+                minvalue=1, maxvalue=3
+            )
+            if tipo is None:
+                return
+
+            codigo = simpledialog.askstring("Crear servicio", "Codigo:")
+            if codigo is None:
+                return
+            nombre = simpledialog.askstring("Crear servicio", "Nombre:")
+            if nombre is None:
+                return
+            tarifa = simpledialog.askfloat(
+                "Crear servicio", "Tarifa:", minvalue=0.01
+            )
+            if tarifa is None:
+                return
+
+            if tipo == 1:
+                servicio = ServicioSala(codigo, nombre, tarifa)
+            elif tipo == 2:
+                servicio = ServicioEquipo(codigo, nombre, tarifa)
+            else:
+                servicio = ServicioAsesoria(codigo, nombre, tarifa)
+
+            self.sistema.agregar_servicio(servicio)
+            self.mostrar_salida(
+                f"SERVICIO CREADO CORRECTAMENTE\n\n"
+                f"Codigo: {servicio.identificacion}\n"
+                f"Nombre: {servicio.nombre}\n"
+                f"Tarifa: ${servicio.tarifa:,.2f}"
+            )
+            messagebox.showinfo("Correcto", "Servicio creado correctamente.")
+
+        self.ejecutar_seguro(operacion)
+
+    def crear_reserva(self):
+        def operacion():
+            if not self.sistema.clientes:
+                messagebox.showwarning(
+                    "Sin clientes", "Primero debe registrar un cliente."
+                )
+                return
+
+            documento = simpledialog.askstring(
+                "Crear reserva", "Documento del cliente:"
+            )
+            if documento is None:
+                return
+            codigo = simpledialog.askstring(
+                "Crear reserva", "Codigo del servicio:"
+            )
+            if codigo is None:
+                return
+            duracion = simpledialog.askfloat(
+                "Crear reserva", "Duracion en horas o dias:", minvalue=0.01
+            )
+            if duracion is None:
+                return
+
+            reserva = self.sistema.crear_reserva(documento, codigo, duracion)
+            self.mostrar_salida(
+                f"RESERVA CREADA CORRECTAMENTE\n\n"
+                f"Codigo: {reserva.identificacion}\n"
+                f"Cliente: {reserva.cliente.nombre}\n"
+                f"Servicio: {reserva.servicio.nombre}\n"
+                f"Duracion: {reserva.duracion}\n"
+                f"Estado: {reserva.estado}"
+            )
+            messagebox.showinfo(
+                "Correcto", f"Reserva creada: {reserva.identificacion}"
+            )
+
+        self.ejecutar_seguro(operacion)
+
+    def consultar_reservas(self):
+        if not self.sistema.reservas:
+            self.mostrar_salida("No hay reservas registradas.")
+            return
+
+        lineas = ["LISTA DE RESERVAS", "=" * 55, ""]
+        for reserva in self.sistema.reservas:
+            costo = (
+                f"${reserva.costo:,.2f}" if reserva.costo is not None
+                else "Pendiente de calculo"
+            )
+            lineas.append(
+                f"Codigo: {reserva.identificacion}\n"
+                f"Cliente: {reserva.cliente.nombre}\n"
+                f"Servicio: {reserva.servicio.nombre}\n"
+                f"Duracion: {reserva.duracion}\n"
+                f"Estado: {reserva.estado}\n"
+                f"Costo: {costo}\n"
+                + "-" * 45
+            )
+        self.mostrar_salida("\n".join(lineas))
+
+    def obtener_reserva_por_dialogo(self):
+        codigo = simpledialog.askstring(
+            "Seleccionar reserva", "Codigo de la reserva (ejemplo R001):"
+        )
+        if codigo is None:
+            return None
+        return self.sistema.buscar_reserva(codigo.strip().upper())
+
+    def confirmar_reserva(self):
+        def operacion():
+            reserva = self.obtener_reserva_por_dialogo()
+            if reserva is None:
+                return
+            reserva.confirmar()
+            self.mostrar_salida(
+                f"La reserva {reserva.identificacion} fue confirmada."
+            )
+            messagebox.showinfo("Correcto", "Reserva confirmada correctamente.")
+
+        self.ejecutar_seguro(operacion)
+
+    def cancelar_reserva(self):
+        def operacion():
+            reserva = self.obtener_reserva_por_dialogo()
+            if reserva is None:
+                return
+            reserva.cancelar()
+            self.mostrar_salida(
+                f"La reserva {reserva.identificacion} fue cancelada."
+            )
+            messagebox.showinfo("Correcto", "Reserva cancelada correctamente.")
+
+        self.ejecutar_seguro(operacion)
+
+    def procesar_reserva(self):
+        def operacion():
+            reserva = self.obtener_reserva_por_dialogo()
+            if reserva is None:
+                return
+            impuesto = simpledialog.askfloat(
+                "Procesar reserva", "Impuesto (%):",
+                minvalue=0, maxvalue=100
+            )
+            if impuesto is None:
+                return
+            descuento = simpledialog.askfloat(
+                "Procesar reserva", "Descuento (%):",
+                minvalue=0, maxvalue=100
+            )
+            if descuento is None:
+                return
+
+            costo = reserva.procesar(impuesto, descuento)
+            self.mostrar_salida(
+                f"RESERVA PROCESADA\n\n"
+                f"Codigo: {reserva.identificacion}\n"
+                f"Cliente: {reserva.cliente.nombre}\n"
+                f"Servicio: {reserva.servicio.nombre}\n"
+                f"Impuesto: {impuesto}%\n"
+                f"Descuento: {descuento}%\n"
+                f"COSTO TOTAL: ${costo:,.2f}"
+            )
+            messagebox.showinfo(
+                "Reserva procesada", f"Costo total: ${costo:,.2f}"
+            )
+
+        self.ejecutar_seguro(operacion)
+
+    def pruebas(self):
+        salida = StringIO()
+        with redirect_stdout(salida):
+            ejecutar_pruebas()
+        self.mostrar_salida(salida.getvalue())
+        messagebox.showinfo(
+            "Pruebas automaticas",
+            "Se ejecutaron las 10 operaciones de prueba. "
+            "Revise los resultados en el panel."
+        )
+
+
+# ============================================================
+# INICIO DEL PROGRAMA CON INTERFAZ GRAFICA
+# ============================================================
+
+if __name__ == "__main__":
     try:
         logging.info("Inicio del sistema Software FJ.")
-        menu_principal()
-
+        ventana = tk.Tk()
+        aplicacion = InterfazSoftwareFJ(ventana)
+        ventana.mainloop()
     except Exception:
         logging.exception("Error critico en el inicio del sistema.")
-        print("No fue posible iniciar el sistema.")
-
+        try:
+            messagebox.showerror(
+                "Error", "No fue posible iniciar el sistema Software FJ."
+            )
+        except tk.TclError:
+            print("No fue posible iniciar el sistema Software FJ.")
     finally:
         logging.info("Finalizacion de la ejecucion.")
+
+
+
